@@ -51,8 +51,8 @@ Requirements
 Installation
 
 1. Clone the repository:
-   git clone <repository-url>
-   cd <repository-directory>
+   git clone https://github.com/platesolver/smapss.git
+   cd smapss
 
 2. Install the required Python packages:
    pip install pygame pygame_gui
