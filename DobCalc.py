@@ -125,11 +125,11 @@ stepper_speed = 2  # steps per frame
 # Initialize default values
 default_values = {
     'stepper_out': 20,
-    'stage1_in': 180,
-    'stage1_out': 40,
-    'stage2_in': 180,
+    'stage1_in': 40, # 180
+    'stage1_out': 40,# 180
+    'stage2_in': 40,
     'stage2_out': 40,
-    'stage3_in': 180,
+    'stage3_in': 40,# 180
     'stage3_out': 40,
     'telescope_in': 240,
     'microstep_count': 1,
@@ -213,6 +213,13 @@ def show_unimplemented_message():
     pygame.display.flip()
     pygame.time.delay(1000)  # Display the message for 1 second
 
+# Function to display limit messages
+def show_limit_message(limit):
+    message_font = pygame.font.Font(None, 36)
+    message = message_font.render(f"{limit} limit reached", True, RED)
+    screen.blit(message, (WIDTH // 2 - 100, HEIGHT - 300))  # Display message above the telescope representation
+    pygame.display.flip()
+
 while running:
     time_delta = clock.tick(60) / 1000.0
 
@@ -289,14 +296,28 @@ while running:
         # Accumulate each pulley angle based on the previous pulley's angle and ratio
         pulley_angles[0] = stepper_angle
         for i in range(1, len(pulley_angles)):
-            pulley_angles[i] += stepper_speed * 360 / (stepper_step * cumulative_ratios[i - 1])
-            pulley_rotations[i] += stepper_speed / (stepper_step * cumulative_ratios[i - 1])
+            if direction == "up":
+                pulley_angles[i] += stepper_speed * 360 / (stepper_step * cumulative_ratios[i - 1])
+                pulley_rotations[i] += stepper_speed / (stepper_step * cumulative_ratios[i - 1])
+            elif direction == "down":
+                pulley_angles[i] -= stepper_speed * 360 / (stepper_step * cumulative_ratios[i - 1])
+                pulley_rotations[i] -= stepper_speed / (stepper_step * cumulative_ratios[i - 1])
             pulley_angles[i] %= 360  # Keep the angle within 0-360 degrees
             rotation_counts[i] = pulley_rotations[i]
 
         # Calculate telescope angle and arcseconds
         telescope_angle = pulley_angles[-1]
         telescope_arcseconds = telescope_angle * 3600
+
+        # Ensure telescope angle remains within 0 to 90 degrees
+        if telescope_angle <= 0:
+            telescope_angle = 0
+            moving = False
+            show_limit_message("Upper")
+        elif telescope_angle >= 90:
+            telescope_angle = 90
+            moving = False
+            show_limit_message("Lower")
 
     # Calculate arcsecond resolutions for different microsteps
     microsteps = [1, 2, 4, 8, 16, 32, 64, 128, 256]
