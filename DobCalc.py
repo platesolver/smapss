@@ -14,7 +14,7 @@
     NEMA stepper motor and three sets of custom 3D printed GT2 pulleys, with two 
     gear ratios per section. The purpose of this simulation is to help visualize 
     and understand the behavior of the pulley system and its effect on the 
-    telescope's movement.
+    telescopes movement.
 
     Note: Avoid using the tab key as it may break the input focus in this version.
 """
@@ -32,7 +32,7 @@ screen = pygame.display.set_mode((WIDTH, HEIGHT))
 # Set up GUI manager
 manager = pygame_gui.UIManager((WIDTH, HEIGHT))
 
-# Define colors
+# Colors
 WHITE = (255, 255, 255)
 BLACK = (0, 0, 0)
 RED = (255, 0, 0)
@@ -40,13 +40,11 @@ RED = (255, 0, 0)
 # Define the radius of the pulleys
 radius = 50
 
-# Title label for the simulation window
-title_label = pygame_gui.elements.UILabel(
-    relative_rect=pygame.Rect((10, 10), (1180, 30)), 
-    text="Stepper Motor and Pulley System Simulation", manager=manager
-)
+# Title
+title_label = pygame_gui.elements.UILabel(relative_rect=pygame.Rect((10, 10), (1180, 30)), 
+                                          text="Stepper Motor and Pulley System Simulation", manager=manager)
 
-# GUI elements for input fields and labels
+# GUI elements
 stepper_out_label = pygame_gui.elements.UILabel(relative_rect=pygame.Rect((10, 50), (250, 30)), text="Stepper GT2 Tooth Count", manager=manager)
 stepper_out_input = pygame_gui.elements.UITextEntryLine(relative_rect=pygame.Rect((270, 50), (100, 30)), manager=manager)
 stepper_out_input.set_text("20")
@@ -97,8 +95,13 @@ speed_input = pygame_gui.elements.UITextEntryLine(relative_rect=pygame.Rect((270
 speed_input.set_text("2")
 
 reset_button = pygame_gui.elements.UIButton(relative_rect=pygame.Rect((10, 490), (150, 30)), text="Reset", manager=manager)
+move_up_button = pygame_gui.elements.UIButton(relative_rect=pygame.Rect((190, 490), (150, 30)), text="Move Up", manager=manager)
+move_left_button = pygame_gui.elements.UIButton(relative_rect=pygame.Rect((10, 530), (150, 30)), text="Move Left", manager=manager)
+stop_button = pygame_gui.elements.UIButton(relative_rect=pygame.Rect((190, 530), (150, 30)), text="Stop", manager=manager)
+move_right_button = pygame_gui.elements.UIButton(relative_rect=pygame.Rect((370, 530), (150, 30)), text="Move Right", manager=manager)
+move_down_button = pygame_gui.elements.UIButton(relative_rect=pygame.Rect((190, 570), (150, 30)), text="Move Down", manager=manager)
 
-# Define the positions for each pulley in the simulation
+# Pulley positions
 right_margin = WIDTH - 300
 positions = [
     (right_margin, 100),  # Stepper
@@ -119,7 +122,7 @@ stepper_steps = 0
 stepper_rotations = 0
 stepper_speed = 2  # steps per frame
 
-# Initialize default values for the inputs
+# Initialize default values
 default_values = {
     'stepper_out': 20,
     'stage1_in': 180,
@@ -129,12 +132,12 @@ default_values = {
     'stage3_in': 180,
     'stage3_out': 40,
     'telescope_in': 240,
-    'microstep_count': 1,  # Treat '1' as 'Full Step'
+    'microstep_count': 1,
     'stepper_step': 200,
     'stepper_speed': 2
 }
 
-# Set initial values based on the defaults
+# Initialize values
 stepper_out = default_values['stepper_out']
 stage1_in = default_values['stage1_in']
 stage1_out = default_values['stage1_out']
@@ -146,18 +149,19 @@ telescope_in = default_values['telescope_in']
 microstep_count = default_values['microstep_count']
 stepper_step = default_values['stepper_step']
 
-# Initialize rotation counts and telescope angle
+# Initialize rotation counts
 rotation_counts = [0, 0, 0, 0, 0]
 telescope_angle = 0
 telescope_arcseconds = 0
 
-# Main loop to keep the simulation running
+# Main loop
 running = True
 clock = pygame.time.Clock()
+moving = False  # Initialize moving state
+direction = None  # Initialize direction
 
-# Function to reset all values to their defaults
 def reset_values():
-    global stepper_angle, stepper_steps, stepper_rotations, pulley_angles, pulley_rotations, rotation_counts, telescope_angle, telescope_arcseconds
+    global stepper_angle, stepper_steps, stepper_rotations, pulley_angles, pulley_rotations, rotation_counts, telescope_angle, telescope_arcseconds, moving, direction
     stepper_out_input.set_text(str(default_values['stepper_out']))
     stage1_in_input.set_text(str(default_values['stage1_in']))
     stage1_out_input.set_text(str(default_values['stage1_out']))
@@ -166,7 +170,7 @@ def reset_values():
     stage3_in_input.set_text(str(default_values['stage3_in']))
     stage3_out_input.set_text(str(default_values['stage3_out']))
     telescope_in_input.set_text(str(default_values['telescope_in']))
-    microstep_count_dropdown.selected_option = ('1', '1')  # Set to 'Full Step' on reset
+    microstep_count_dropdown.selected_option = str(default_values['microstep_count'])
     stepper_step_dropdown.selected_option = str(default_values['stepper_step'])
     speed_input.set_text(str(default_values['stepper_speed']))
     stepper_angle = 0
@@ -177,6 +181,8 @@ def reset_values():
     rotation_counts = [0, 0, 0, 0, 0]
     telescope_angle = 0
     telescope_arcseconds = 0
+    moving = False
+    direction = None
 
 # Initial reset to set the default values
 reset_values()
@@ -190,40 +196,56 @@ text_inputs = [
 ]
 current_focus_index = 0
 
-# Function to calculate arcsecond resolution for different microstepping modes
+# Function to calculate arcsecond resolution
 def calculate_arcsecond_resolution(microsteps):
     resolutions = []
     for ms in microsteps:
-        if ms == 1:  # Handle full step separately
-            step_angle = 360 / stepper_step  # Calculate step angle in degrees
-        else:
-            step_angle = 360 / (stepper_step * ms)  # Calculate step angle in degrees for microstepping
-        telescope_resolution = step_angle / cumulative_ratios[-1] * 3600  # Calculate telescope resolution in arcseconds
-        resolutions.append(f"{ms}x: {telescope_resolution:.6f} arcseconds")  # Store the result in the list
+        step_angle = 360 / (stepper_step * ms)
+        telescope_resolution = step_angle / cumulative_ratios[-1] * 3600
+        resolutions.append(f"{ms}x: {telescope_resolution:.6f} arcseconds")
     return resolutions
 
+# Function to display unimplemented feature message
+def show_unimplemented_message():
+    message_font = pygame.font.Font(None, 36)
+    message = message_font.render("Feature not implemented", True, BLACK)
+    screen.blit(message, (WIDTH // 2 - 150, HEIGHT // 2 - 20))
+    pygame.display.flip()
+    pygame.time.delay(1000)  # Display the message for 1 second
+
 while running:
-    time_delta = clock.tick(60) / 1000.0  # Control the frame rate
+    time_delta = clock.tick(60) / 1000.0
 
     for event in pygame.event.get():
-        if event.type == pygame.QUIT:  # Handle the quit event
+        if event.type == pygame.QUIT:
             running = False
-        elif event.type == pygame.KEYDOWN and event.key == pygame.K_TAB:  # Handle the tab key for focus switching
+        elif event.type == pygame.KEYDOWN and event.key == pygame.K_TAB:
             if event.mod & pygame.KMOD_SHIFT:
                 current_focus_index = (current_focus_index - 1) % len(text_inputs)
             else:
                 current_focus_index = (current_focus_index + 1) % len(text_inputs)
-            text_inputs[current_focus_index].focus()  # Set focus to the current input field
-        elif event.type == pygame_gui.UI_BUTTON_PRESSED:  # Handle the reset button click
+            text_inputs[current_focus_index].focus()
+        elif event.type == pygame_gui.UI_BUTTON_PRESSED:
             if event.ui_element == reset_button:
                 reset_values()
+            elif event.ui_element == move_up_button:
+                moving = True
+                direction = "up"
+            elif event.ui_element == move_down_button:
+                moving = True
+                direction = "down"
+            elif event.ui_element == stop_button:
+                moving = False
+            elif event.ui_element == move_left_button or event.ui_element == move_right_button:
+                show_unimplemented_message()
+                moving = False
 
-        manager.process_events(event)  # Pass events to the GUI manager
+        manager.process_events(event)
 
-    manager.update(time_delta)  # Update the GUI manager
-    screen.fill(WHITE)  # Clear the screen with white color
+    manager.update(time_delta)
+    screen.fill(WHITE)
 
-    # Get updated values from the input fields
+    # Get updated values
     try:
         stepper_out = max(1, min(1440, int(stepper_out_input.get_text())))
         stage1_in = max(1, min(1440, int(stage1_in_input.get_text())))
@@ -233,11 +255,7 @@ while running:
         stage3_in = max(1, min(1440, int(stage3_in_input.get_text())))
         stage3_out = max(1, min(1440, int(stage3_out_input.get_text())))
         telescope_in = max(1, min(1440, int(telescope_in_input.get_text())))
-        
-        # Update microstep_count based on selection
-        selected_microstep = microstep_count_dropdown.selected_option[0]
-        microstep_count = int(selected_microstep) if selected_microstep != '1' else 1
-        
+        microstep_count = int(microstep_count_dropdown.selected_option)
         stepper_step = int(stepper_step_dropdown.selected_option)
         stepper_speed = max(1, min(360, int(speed_input.get_text())))
     except ValueError:
@@ -258,22 +276,27 @@ while running:
         cumulative_ratios = [1, 1, 1, 1]
 
     # Update stepper motor angle
-    stepper_angle += stepper_speed * 360 / stepper_step  # Update stepper angle based on speed and steps per revolution
-    stepper_steps += stepper_speed  # Update total steps taken by the stepper
-    stepper_rotations = stepper_steps / stepper_step  # Calculate total rotations of the stepper
-    stepper_angle %= 360  # Keep the angle within 0-360 degrees
+    if moving:
+        if direction == "up" and telescope_angle > 0:
+            stepper_angle += stepper_speed * 360 / stepper_step
+            stepper_steps += stepper_speed
+        elif direction == "down" and telescope_angle < 90:
+            stepper_angle -= stepper_speed * 360 / stepper_step
+            stepper_steps -= stepper_speed
+        stepper_rotations = stepper_steps / stepper_step
+        stepper_angle %= 360
 
-    # Update angles for each pulley based on the previous pulley's angle and ratio
-    pulley_angles[0] = stepper_angle
-    for i in range(1, len(pulley_angles)):
-        pulley_angles[i] += stepper_speed * 360 / (stepper_step * cumulative_ratios[i - 1])
-        pulley_rotations[i] += stepper_speed / (stepper_step * cumulative_ratios[i - 1])
-        pulley_angles[i] %= 360  # Keep the angle within 0-360 degrees
-        rotation_counts[i] = pulley_rotations[i]
+        # Accumulate each pulley angle based on the previous pulley's angle and ratio
+        pulley_angles[0] = stepper_angle
+        for i in range(1, len(pulley_angles)):
+            pulley_angles[i] += stepper_speed * 360 / (stepper_step * cumulative_ratios[i - 1])
+            pulley_rotations[i] += stepper_speed / (stepper_step * cumulative_ratios[i - 1])
+            pulley_angles[i] %= 360  # Keep the angle within 0-360 degrees
+            rotation_counts[i] = pulley_rotations[i]
 
-    # Calculate telescope angle and arcseconds
-    telescope_angle = pulley_angles[-1]
-    telescope_arcseconds = telescope_angle * 3600
+        # Calculate telescope angle and arcseconds
+        telescope_angle = pulley_angles[-1]
+        telescope_arcseconds = telescope_angle * 3600
 
     # Calculate arcsecond resolutions for different microsteps
     microsteps = [1, 2, 4, 8, 16, 32, 64, 128, 256]
@@ -319,7 +342,15 @@ while running:
         resolution_text = resolution_font.render(res, True, BLACK)
         screen.blit(resolution_text, (WIDTH // 2 - 100, 70 + idx * 30))
 
-    manager.draw_ui(screen)  # Draw the UI manager
+    # Draw telescope representation
+    telescope_base_x = WIDTH // 2
+    telescope_base_y = HEIGHT - 150
+    telescope_length = 200
+    telescope_x = telescope_base_x + telescope_length * math.cos(math.radians(telescope_angle))
+    telescope_y = telescope_base_y - telescope_length * math.sin(math.radians(telescope_angle))
+    pygame.draw.line(screen, BLACK, (telescope_base_x, telescope_base_y), (telescope_x, telescope_y), 5)
+
+    manager.draw_ui(screen)
 
     # Update display
     pygame.display.flip()

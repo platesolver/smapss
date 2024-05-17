@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Interactive Telescope Rotation</title>
+    <script>
+        let targetAngle = 90;
+        let currentAngle = 0;
+        let increment = 1;  // Control the speed of the rotation
+        let animating = false;  // Control animation state
+
+        function rotateTelescope() {
+            if (animating) return;  // Prevent new animation if already running
+            animating = true;
+            animateRotation();
+        }
+
+        function animateRotation() {
+            var telescope = document.getElementById('telescope-arm');
+            // Determine the direction of rotation based on target and current angle
+            if (currentAngle < targetAngle) {
+                currentAngle += increment;
+                if (currentAngle > targetAngle) {
+                    currentAngle = targetAngle;  // Ensure it does not exceed target
+                }
+            } else {
+                currentAngle -= increment;
+                if (currentAngle < targetAngle) {
+                    currentAngle = targetAngle;  // Ensure it does not fall below target
+                }
+            }
+
+            // Update the rotation
+            telescope.setAttribute('transform', 'rotate(' + currentAngle + ' 512 550)');
+
+            // Check if the target angle has been reached
+            if (currentAngle === targetAngle) {
+                animating = false;  // Stop the animation
+                toggleTargetAngle();  // Toggle the target angle for next click
+                return;
+            }
+
+            // Continue the animation
+            requestAnimationFrame(animateRotation);
+        }
+
+        function toggleTargetAngle() {
+            targetAngle = (targetAngle === 90) ? 0 : 90;  // Toggle between 0 and 90 degrees
+            document.getElementById('rotate-button').textContent = 'Rotate to ' + targetAngle + '°';  // Update button text
+        }
+    </script>
+</head>
+<body>
+<svg width="1024px" height="686px" xmlns="http://www.w3.org/2000/svg">
+    <!-- Ground -->
+    <rect x="0" y="660" width="1024" height="26" fill="black"/>
+
+    <!-- Platform -->
+    <rect x="100" y="600" width="824" height="60" fill="grey"/>
+
+    <!-- Rollers on the Platform -->
+    <circle cx="200" cy="630" r="15" fill="silver"/>
+    <circle cx="824" cy="630" r="15" fill="silver"/>
+
+    <!-- Central Pivot -->
+    <circle cx="512" cy="550" r="50" fill="darkgrey"/>
+
+    <!-- Rotating Group for the Telescope Arm -->
+    <g id="telescope-arm" transform="rotate(0 512 550)">
+        <!-- Telescope Arm -->
+        <rect x="487" y="100" width="50" height="450" fill="navy"/>
+    </g>
+
+    <!-- North Celestial Pole (NCP) Label and Line -->
+    <line x1="512" y1="550" x2="512" y2="50" stroke="black" stroke-width="3" stroke-dasharray="5,5"/>
+    <text x="522" y="40" fill="black" font-size="16" font-family="Arial">NCP</text>
+
+    <!-- Additional Lines to Show Direction -->
+    <line x1="512" y1="550" x2="962" y2="550" stroke="black" stroke-width="3"/>
+    <text x="972" y="550" fill="black" font-size="16" font-family="Arial">E</text>
+    <line x1="512" y1="550" x2="62" y2="550" stroke="black" stroke-width="3"/>
+    <text x="42" y="550" fill="black" font-size="16" font-family="Arial">W</text>
+</svg>
+
+<button id="rotate-button" onclick="rotateTelescope()">Rotate to 90°</button>
+
+</body>
+</html>
