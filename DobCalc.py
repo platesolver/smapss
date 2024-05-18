@@ -1,24 +1,3 @@
-"""
-    Stepper Motor and Pulley System Simulation
-    (C) 2024 Andrew Smalley - AKADATA LIMITED
-
-    [![License: CC BY-NC-SA 4.0]
-    (https://img.shields.io/badge/License-CC%20BY--NC--SA%204.0-lightgrey.svg)]
-    (https://creativecommons.org/licenses/by-nc-sa/4.0/)
-
-    To view a copy of this license, visit http://creativecommons.org/licenses/by-nc-sa/4.0/ 
-    or send a letter to Creative Commons, PO Box 1866, Mountain View, CA 94042, USA.
-
-    This project simulates a gearing pulley system for the altitude adjustment 
-    of a 12 inch Dobsonian telescope on its standard base. The simulation uses a 
-    NEMA stepper motor and three sets of custom 3D printed GT2 pulleys, with two 
-    gear ratios per section. The purpose of this simulation is to help visualize 
-    and understand the behavior of the pulley system and its effect on the 
-    telescopes movement.
-
-    Note: Avoid using the tab key as it may break the input focus in this version.
-"""
-
 import pygame
 import pygame_gui
 import math
@@ -122,20 +101,36 @@ stepper_steps = 0
 stepper_rotations = 0
 stepper_speed = 2  # steps per frame
 
+test = 0
 # Initialize default values
-default_values = {
-    'stepper_out': 20,
-    'stage1_in': 40, # 180
-    'stage1_out': 40,# 180
-    'stage2_in': 40,
-    'stage2_out': 40,
-    'stage3_in': 40,# 180
-    'stage3_out': 40,
-    'telescope_in': 240,
-    'microstep_count': 1,
-    'stepper_step': 200,
-    'stepper_speed': 2
-}
+if test == 1:
+    default_values = {
+        'stepper_out': 20,
+        'stage1_in': 20,
+        'stage1_out': 40,
+        'stage2_in': 40,
+        'stage2_out': 40,
+        'stage3_in': 40,
+        'stage3_out': 40,
+        'telescope_in': 240,
+        'microstep_count': 1,
+        'stepper_step': 200,
+        'stepper_speed': 2
+    } 
+elif test == 0:
+    default_values = {
+        'stepper_out': 20,
+        'stage1_in': 180,
+        'stage1_out': 40,
+        'stage2_in': 180,
+        'stage2_out': 40,
+        'stage3_in': 180,
+        'stage3_out': 40,
+        'telescope_in': 240,
+        'microstep_count': 1,
+        'stepper_step': 200,
+        'stepper_speed': 2
+    }
 
 # Initialize values
 stepper_out = default_values['stepper_out']
@@ -159,9 +154,10 @@ running = True
 clock = pygame.time.Clock()
 moving = False  # Initialize moving state
 direction = None  # Initialize direction
+flash_message = None  # Initialize flash message
 
 def reset_values():
-    global stepper_angle, stepper_steps, stepper_rotations, pulley_angles, pulley_rotations, rotation_counts, telescope_angle, telescope_arcseconds, moving, direction
+    global stepper_angle, stepper_steps, stepper_rotations, pulley_angles, pulley_rotations, rotation_counts, telescope_angle, telescope_arcseconds, moving, direction, flash_message
     stepper_out_input.set_text(str(default_values['stepper_out']))
     stage1_in_input.set_text(str(default_values['stage1_in']))
     stage1_out_input.set_text(str(default_values['stage1_out']))
@@ -183,6 +179,7 @@ def reset_values():
     telescope_arcseconds = 0
     moving = False
     direction = None
+    flash_message = None
 
 # Initial reset to set the default values
 reset_values()
@@ -207,18 +204,13 @@ def calculate_arcsecond_resolution(microsteps):
 
 # Function to display unimplemented feature message
 def show_unimplemented_message():
-    message_font = pygame.font.Font(None, 36)
-    message = message_font.render("Feature not implemented", True, BLACK)
-    screen.blit(message, (WIDTH // 2 - 150, HEIGHT // 2 - 20))
-    pygame.display.flip()
-    pygame.time.delay(1000)  # Display the message for 1 second
+    global flash_message
+    flash_message = "Feature not implemented"
 
 # Function to display limit messages
 def show_limit_message(limit):
-    message_font = pygame.font.Font(None, 36)
-    message = message_font.render(f"{limit} limit reached", True, RED)
-    screen.blit(message, (WIDTH // 2 - 100, HEIGHT - 300))  # Display message above the telescope representation
-    pygame.display.flip()
+    global flash_message
+    flash_message = f"{limit} limit reached"
 
 while running:
     time_delta = clock.tick(60) / 1000.0
@@ -238,9 +230,11 @@ while running:
             elif event.ui_element == move_up_button:
                 moving = True
                 direction = "up"
+                flash_message = None  # Clear flash message
             elif event.ui_element == move_down_button:
                 moving = True
                 direction = "down"
+                flash_message = None  # Clear flash message
             elif event.ui_element == stop_button:
                 moving = False
             elif event.ui_element == move_left_button or event.ui_element == move_right_button:
@@ -311,13 +305,13 @@ while running:
 
         # Ensure telescope angle remains within 0 to 90 degrees
         if telescope_angle <= 0:
-            telescope_angle = 0
-            moving = False
+        #    telescope_angle = 0
             show_limit_message("Upper")
-        elif telescope_angle >= 90:
-            telescope_angle = 90
             moving = False
+        elif telescope_angle >= 90:
+        #    telescope_angle = 90
             show_limit_message("Lower")
+            moving = False
 
     # Calculate arcsecond resolutions for different microsteps
     microsteps = [1, 2, 4, 8, 16, 32, 64, 128, 256]
@@ -370,6 +364,12 @@ while running:
     telescope_x = telescope_base_x + telescope_length * math.cos(math.radians(telescope_angle))
     telescope_y = telescope_base_y - telescope_length * math.sin(math.radians(telescope_angle))
     pygame.draw.line(screen, BLACK, (telescope_base_x, telescope_base_y), (telescope_x, telescope_y), 5)
+
+    # Display flash message if any
+    if flash_message:
+        message_font = pygame.font.Font(None, 36)
+        message = message_font.render(flash_message, True, RED)
+        screen.blit(message, (WIDTH // 2 - 150, HEIGHT - 250))  # Adjust position if needed
 
     manager.draw_ui(screen)
 
