@@ -51,20 +51,23 @@ Requirements
 Installation
 
 1. Clone the repository:
-   git clone <repository-url>
-   cd <repository-directory>
+   
+   git clone https://github.com/platesolver/smapss.git; cd smapss
 
-2. Install the required Python packages:
+3. Install the required Python packages:
+   
    pip install pygame pygame_gui
 
 Usage
 
 1. Run the simulation:
+   
    python DobCalc.py
+   
 
-2. The simulation window will open, displaying the stepper motor and pulley system.
+3. The simulation window will open, displaying the stepper motor and pulley system.
 
-3. Use the input fields on the left side of the window to adjust the parameters:
+4. Use the input fields on the left side of the window to adjust the parameters:
    - Stepper GT2 Tooth Count: Number of teeth on the stepper motor pulley, start with an aluminum 20 tooth GT2 pulley
    - Stage 1 GT2 Tooth Count (In/Out): Number of teeth on the input/output pulleys for Stage 1. 30:160 default 5.33:1
    - Stage 2 GT2 Tooth Count (In/Out): Number of teeth on the input/output pulleys for Stage 2. 30:160 default 5.33:1
@@ -74,14 +77,14 @@ Usage
    - Stepper Steps per Revolution: Number of steps per revolution for the stepper motor.
    - Speed (steps per frame): Speed of the stepper motor in steps per frame.
 
-4. The simulation will update in real-time based on the input parameters. The display shows:
+5. The simulation will update in real-time based on the input parameters. The display shows:
    - Steps and rotations for the stepper motor
    - Rotations for each pulley stage
    - Angle and arcseconds for the telescope
 
-5. Arcsecond resolution for each microstepping mode is displayed in the middle of the window under the title.
+6. Arcsecond resolution for each microstepping mode is displayed in the middle of the window under the title.
 
-6. Click the "Reset" button to reset the parameters to their default values.
+7. Click the "Reset" button to reset the parameters to their default values.
 
 STL Files
 
